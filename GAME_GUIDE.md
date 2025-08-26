@@ -1,13 +1,13 @@
-# Tank Battle Game Guide
+# 🎮 Tank Battle Game Guide
 
-## How to Play
+## 🚀 How to Play
 
 ### Starting the Game
 1. Run `cargo run --release` to start the game
 2. On the main menu, press 1, 2, or 3 to select difficulty:
-   - **1 - Easy**: Fewer enemies, slower pace
-   - **2 - Normal**: Balanced gameplay
-   - **3 - Hard**: More enemies, faster action
+   - **1 - Easy**: Smart AI with fast movement (160 speed), predictive aiming
+   - **2 - Normal**: Balanced gameplay with moderate AI
+   - **3 - Hard**: Aggressive AI, more enemies, faster action
 
 ### Controls
 - **Movement**: WASD keys or Arrow keys
