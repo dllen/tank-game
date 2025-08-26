@@ -77,28 +77,54 @@ pub fn check_bullet_obstacle_collisions(bullets: &mut Vec<Bullet>, obstacles: &m
 }
 
 pub fn check_tank_obstacle_collisions(tank: &mut Tank, obstacles: &[Obstacle]) {
+    let mut collision_detected = false;
+    
     for obstacle in obstacles {
         if obstacle.collides_with_circle(&tank.position, tank.size) {
-            // 简单的碰撞响应：停止移动
-            tank.velocity.x = 0.0;
-            tank.velocity.y = 0.0;
+            collision_detected = true;
             
-            // 将坦克推出障碍物
+            // 计算障碍物中心
             let center_x = obstacle.position.x + obstacle.width / 2.0;
             let center_y = obstacle.position.y + obstacle.height / 2.0;
             
+            // 计算从障碍物中心到坦克的向量
             let dx = tank.position.x - center_x;
             let dy = tank.position.y - center_y;
             let distance = (dx * dx + dy * dy).sqrt();
             
             if distance > 0.0 {
-                let push_distance = tank.size + 5.0;
-                tank.position.x = center_x + (dx / distance) * push_distance;
-                tank.position.y = center_y + (dy / distance) * push_distance;
+                // 计算最小分离距离
+                let min_distance = tank.size + (obstacle.width.max(obstacle.height) / 2.0) + 2.0;
+                
+                // 如果距离小于最小距离，推出坦克
+                if distance < min_distance {
+                    let push_factor = min_distance / distance;
+                    tank.position.x = center_x + dx * push_factor;
+                    tank.position.y = center_y + dy * push_factor;
+                }
+            }
+            
+            // 停止向障碍物方向的移动
+            let vel_dot_collision = tank.velocity.x * (-dx) + tank.velocity.y * (-dy);
+            if vel_dot_collision > 0.0 {
+                // 移除朝向障碍物的速度分量
+                let collision_normal_x = -dx / distance;
+                let collision_normal_y = -dy / distance;
+                
+                tank.velocity.x -= vel_dot_collision * collision_normal_x;
+                tank.velocity.y -= vel_dot_collision * collision_normal_y;
             }
         }
     }
+    
+    // 如果检测到碰撞，减少速度以防止抖动
+    if collision_detected {
+        tank.velocity.x *= 0.5;
+        tank.velocity.y *= 0.5;
+    }
 }
+
+
 
 pub fn check_powerup_collisions(tank: &mut Tank, powerups: &mut Vec<PowerUp>) -> Vec<PowerUpType> {
     let mut collected_powerups = Vec::new();

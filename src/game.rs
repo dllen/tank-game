@@ -1,6 +1,7 @@
 use crate::entities::*;
 use crate::systems::*;
 use crate::ui::GameUI;
+use crate::math_challenge::MathChallenge;
 use macroquad::prelude::*;
 use ::rand::{thread_rng, Rng};
 
@@ -10,6 +11,7 @@ pub enum GameState {
     Playing,
     Paused,
     GameOver,
+    MathChallenge,
 }
 
 pub struct Game {
@@ -29,6 +31,7 @@ pub struct Game {
     pub enemies_per_wave: i32,
     pub difficulty: f32,
     pub last_difficulty_increase: f64,
+    pub math_challenge: Option<MathChallenge>,
 }
 
 impl Game {
@@ -50,6 +53,7 @@ impl Game {
             enemies_per_wave: 5,
             difficulty: 1.0,
             last_difficulty_increase: 0.0,
+            math_challenge: None,
         };
         
         game.generate_obstacles();
@@ -70,6 +74,7 @@ impl Game {
         self.enemies_killed_this_wave = 0;
         self.enemies_per_wave = 5;
         self.last_difficulty_increase = get_time();
+        self.math_challenge = None;
         self.generate_obstacles();
     }
     
@@ -111,6 +116,7 @@ impl Game {
             GameState::Playing => self.update_playing().await,
             GameState::Paused => self.update_paused().await,
             GameState::GameOver => self.update_game_over().await,
+            GameState::MathChallenge => self.update_math_challenge().await,
         }
     }
     
@@ -136,9 +142,8 @@ impl Game {
         let new_bullets = handle_player_input(&mut self.player_tank, dt);
         self.bullets.extend(new_bullets);
         
-        // 更新玩家坦克
-        self.player_tank.update(dt);
-        check_tank_obstacle_collisions(&mut self.player_tank, &self.obstacles);
+        // 更新玩家坦克 - 使用安全移动
+        self.player_tank.safe_move(dt, &self.obstacles);
         
         // 更新敌方坦克
         for (tank, ai) in self.enemy_tanks.iter_mut().zip(self.enemy_ais.iter_mut()) {
@@ -216,10 +221,9 @@ impl Game {
         
         // 检查玩家死亡
         if self.player_tank.health <= 0 {
-            if self.score > self.high_score {
-                self.high_score = self.score;
-            }
-            self.state = GameState::GameOver;
+            // 生成数学挑战
+            self.math_challenge = Some(MathChallenge::new_random());
+            self.state = GameState::MathChallenge;
         }
     }
     
@@ -232,6 +236,64 @@ impl Game {
     async fn update_game_over(&mut self) {
         if is_key_pressed(KeyCode::R) {
             self.state = GameState::Menu;
+        }
+    }
+    
+    async fn update_math_challenge(&mut self) {
+        if let Some(ref mut challenge) = self.math_challenge {
+            // 处理数字输入
+            for key_code in [
+                KeyCode::Key0, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3, KeyCode::Key4,
+                KeyCode::Key5, KeyCode::Key6, KeyCode::Key7, KeyCode::Key8, KeyCode::Key9,
+            ] {
+                if is_key_pressed(key_code) {
+                    let digit = match key_code {
+                        KeyCode::Key0 => '0',
+                        KeyCode::Key1 => '1',
+                        KeyCode::Key2 => '2',
+                        KeyCode::Key3 => '3',
+                        KeyCode::Key4 => '4',
+                        KeyCode::Key5 => '5',
+                        KeyCode::Key6 => '6',
+                        KeyCode::Key7 => '7',
+                        KeyCode::Key8 => '8',
+                        KeyCode::Key9 => '9',
+                        _ => continue,
+                    };
+                    challenge.add_digit(digit);
+                }
+            }
+            
+            // 处理退格键
+            if is_key_pressed(KeyCode::Backspace) {
+                challenge.remove_digit();
+            }
+            
+            // 处理回车键提交答案
+            if is_key_pressed(KeyCode::Enter) {
+                if challenge.submit_answer() {
+                    // 答案正确，复活玩家
+                    self.player_tank.health = self.player_tank.max_health / 2; // 复活时恢复一半血量
+                    self.math_challenge = None;
+                    self.state = GameState::Playing;
+                } else {
+                    // 答案错误，游戏结束
+                    if self.score > self.high_score {
+                        self.high_score = self.score;
+                    }
+                    self.math_challenge = None;
+                    self.state = GameState::GameOver;
+                }
+            }
+            
+            // ESC键直接游戏结束
+            if is_key_pressed(KeyCode::Escape) {
+                if self.score > self.high_score {
+                    self.high_score = self.score;
+                }
+                self.math_challenge = None;
+                self.state = GameState::GameOver;
+            }
         }
     }
     
@@ -298,6 +360,12 @@ impl Game {
             GameState::GameOver => {
                 self.draw_game();
                 self.ui.draw_game_over(self.score, self.wave, self.high_score);
+            }
+            GameState::MathChallenge => {
+                self.draw_game();
+                if let Some(ref challenge) = self.math_challenge {
+                    self.ui.draw_math_challenge(challenge);
+                }
             }
         }
     }

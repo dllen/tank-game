@@ -18,7 +18,7 @@ impl SpawnSystem {
             enemy_spawn_interval: 3.0 / difficulty as f64,
             last_powerup_spawn: 0.0,
             powerup_spawn_interval: 8.0,
-            max_enemies: (5.0 * difficulty) as usize,
+            max_enemies: 4, // 固定最大敌方坦克数量为4辆
             difficulty_multiplier: difficulty,
         }
     }
@@ -77,6 +77,7 @@ impl SpawnSystem {
     pub fn increase_difficulty(&mut self) {
         self.difficulty_multiplier += 0.1;
         self.enemy_spawn_interval = (3.0 / self.difficulty_multiplier as f64).max(0.5);
-        self.max_enemies = ((5.0 * self.difficulty_multiplier) as usize).min(15);
+        // 保持最大敌方坦克数量为4辆，不随难度增加
+        self.max_enemies = 4;
     }
 }

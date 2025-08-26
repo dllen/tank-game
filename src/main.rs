@@ -4,6 +4,7 @@ mod game;
 mod entities;
 mod systems;
 mod ui;
+mod math_challenge;
 
 use game::Game;
 
