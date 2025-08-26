@@ -32,7 +32,15 @@ impl SpawnSystem {
                 let mut enemy = Tank::new_enemy(spawn_pos.x, spawn_pos.y);
                 // 根据难度调整敌人属性
                 enemy.health = (enemy.health as f32 * self.difficulty_multiplier) as i32;
-                enemy.speed *= 1.0 + (self.difficulty_multiplier - 1.0) * 0.5;
+                // 调整速度：容易模式稍微快一些，其他模式按原来的逻辑
+                if self.difficulty_multiplier <= 1.0 {
+                    // 容易模式：基础速度提升100%，射击更快
+                    enemy.speed *= 2.0;
+                    enemy.shot_cooldown = 0.6; // 减少射击冷却时间
+                } else {
+                    // 其他模式：按原来的公式
+                    enemy.speed *= 1.0 + (self.difficulty_multiplier - 1.0) * 0.5;
+                }
                 enemies.push(enemy);
                 self.last_enemy_spawn = current_time;
             }

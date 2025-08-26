@@ -20,7 +20,9 @@ pub struct Tank {
 
 #[derive(Clone)]
 pub struct Shield {
+    #[allow(dead_code)]
     pub duration: f64,
+    #[allow(dead_code)]
     pub start_time: f64,
 }
 
@@ -61,6 +63,7 @@ impl Tank {
         }
     }
     
+    #[allow(dead_code)]
     pub fn update(&mut self, dt: f32) {
         // 预测新位置
         let new_x = self.position.x + self.velocity.x * dt;
@@ -106,10 +109,21 @@ impl Tank {
     // 新增：检查是否会与障碍物碰撞的预测函数
     pub fn would_collide_with_obstacles(&self, new_x: f32, new_y: f32, obstacles: &[crate::entities::Obstacle]) -> bool {
         for obstacle in obstacles {
-            let distance_x = (new_x - (obstacle.position.x + obstacle.width / 2.0)).abs();
-            let distance_y = (new_y - (obstacle.position.y + obstacle.height / 2.0)).abs();
+            // 计算障碍物的边界
+            let obstacle_left = obstacle.position.x;
+            let obstacle_right = obstacle.position.x + obstacle.width;
+            let obstacle_top = obstacle.position.y;
+            let obstacle_bottom = obstacle.position.y + obstacle.height;
             
-            if distance_x < (self.size + obstacle.width / 2.0) && distance_y < (self.size + obstacle.height / 2.0) {
+            // 计算坦克的边界
+            let tank_left = new_x - self.size;
+            let tank_right = new_x + self.size;
+            let tank_top = new_y - self.size;
+            let tank_bottom = new_y + self.size;
+            
+            // 检查是否重叠
+            if tank_right > obstacle_left && tank_left < obstacle_right &&
+               tank_bottom > obstacle_top && tank_top < obstacle_bottom {
                 return true;
             }
         }
@@ -132,17 +146,21 @@ impl Tank {
         let mut new_x = target_x;
         let mut new_y = target_y;
         
-        // 边界限制
+        // 边界限制和反弹
         if new_x - self.size < 0.0 {
             new_x = self.size;
+            self.velocity.x = 0.0; // 停止向边界移动
         } else if new_x + self.size > screen_width {
             new_x = screen_width - self.size;
+            self.velocity.x = 0.0; // 停止向边界移动
         }
         
         if new_y - self.size < 0.0 {
             new_y = self.size;
+            self.velocity.y = 0.0; // 停止向边界移动
         } else if new_y + self.size > screen_height {
             new_y = screen_height - self.size;
+            self.velocity.y = 0.0; // 停止向边界移动
         }
         
         // 尝试X轴移动
@@ -151,6 +169,12 @@ impl Tank {
             self.position.x = test_x_pos;
         } else {
             self.velocity.x = 0.0; // 停止X轴移动
+            // 添加小幅度的反向推力防止抖动
+            if target_x > original_x {
+                self.velocity.x = -10.0; // 向左推
+            } else if target_x < original_x {
+                self.velocity.x = 10.0; // 向右推
+            }
         }
         
         // 尝试Y轴移动
@@ -159,6 +183,12 @@ impl Tank {
             self.position.y = test_y_pos;
         } else {
             self.velocity.y = 0.0; // 停止Y轴移动
+            // 添加小幅度的反向推力防止抖动
+            if target_y > original_y {
+                self.velocity.y = -10.0; // 向上推
+            } else if target_y < original_y {
+                self.velocity.y = 10.0; // 向下推
+            }
         }
         
         // 如果两个轴都不能移动，尝试对角线移动
@@ -166,6 +196,29 @@ impl Tank {
             if !self.would_collide_with_obstacles(new_x, new_y, obstacles) {
                 self.position.x = new_x;
                 self.position.y = new_y;
+            } else {
+                // 如果完全卡住，尝试小幅度随机移动来脱困
+                let mut rng = ::rand::thread_rng();
+                use ::rand::Rng;
+                
+                for _ in 0..8 { // 尝试8个方向
+                    let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                    let escape_distance = self.size * 0.5;
+                    let escape_x = original_x + angle.cos() * escape_distance;
+                    let escape_y = original_y + angle.sin() * escape_distance;
+                    
+                    // 检查边界
+                    if escape_x - self.size >= 0.0 && escape_x + self.size <= screen_width &&
+                       escape_y - self.size >= 0.0 && escape_y + self.size <= screen_height {
+                        if !self.would_collide_with_obstacles(escape_x, escape_y, obstacles) {
+                            self.position.x = escape_x;
+                            self.position.y = escape_y;
+                            self.velocity.x *= 0.5; // 减少速度避免再次卡住
+                            self.velocity.y *= 0.5;
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -235,7 +288,7 @@ impl Tank {
             barrel_start_y + 1.0,
             barrel_end_x + 1.0,
             barrel_end_y + 1.0,
-            6.0,
+            10.0,
             Color::new(0.0, 0.0, 0.0, 0.3),
         );
         
@@ -245,7 +298,7 @@ impl Tank {
             barrel_start_y,
             barrel_end_x,
             barrel_end_y,
-            6.0,
+            10.0,
             BLACK,
         );
         
@@ -255,7 +308,7 @@ impl Tank {
             barrel_start_y,
             barrel_end_x,
             barrel_end_y,
-            2.0,
+            4.0,
             DARKGRAY,
         );
         

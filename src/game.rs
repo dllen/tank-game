@@ -148,8 +148,8 @@ impl Game {
         // 更新敌方坦克
         for (tank, ai) in self.enemy_tanks.iter_mut().zip(self.enemy_ais.iter_mut()) {
             ai.update(tank, &self.player_tank, &self.obstacles);
-            tank.update(dt);
-            check_tank_obstacle_collisions(tank, &self.obstacles);
+            // 使用安全移动，防止卡在障碍物中
+            tank.safe_move(dt, &self.obstacles);
             
             // 敌方坦克射击
             let distance = tank.position.distance_to(&self.player_tank.position);
@@ -205,7 +205,7 @@ impl Game {
         
         // 为新生成的敌人创建AI
         while self.enemy_ais.len() < self.enemy_tanks.len() {
-            self.enemy_ais.push(EnemyAI::new());
+            self.enemy_ais.push(EnemyAI::new_with_difficulty(self.difficulty));
         }
         
         // 检查波数完成
@@ -304,7 +304,7 @@ impl Game {
                 self.score += 20;
             }
             PowerUpType::Shield => {
-                self.player_tank.add_shield(10.0);
+                self.player_tank.add_shield(30.0);
                 self.score += 30;
             }
             PowerUpType::ScatterShot => {

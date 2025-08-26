@@ -76,6 +76,7 @@ pub fn check_bullet_obstacle_collisions(bullets: &mut Vec<Bullet>, obstacles: &m
     }
 }
 
+#[allow(dead_code)]
 pub fn check_tank_obstacle_collisions(tank: &mut Tank, obstacles: &[Obstacle]) {
     let mut collision_detected = false;
     
