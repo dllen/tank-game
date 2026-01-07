@@ -85,16 +85,16 @@ impl Game {
         let screen_w = screen_width();
         let screen_h = screen_height();
         
-        // 生成随机障碍物
-        for _ in 0..15 {
+        // 生成墙体和钢墙
+        for _ in 0..8 {
             let x = rng.gen_range(50.0..screen_w - 100.0);
             let y = rng.gen_range(50.0..screen_h - 100.0);
-            let width = rng.gen_range(30.0..80.0);
-            let height = rng.gen_range(30.0..80.0);
+            let width = rng.gen_range(40.0..100.0);
+            let height = rng.gen_range(40.0..100.0);
             
             // 确保不在玩家起始位置附近
-            if (x - screen_w / 2.0).abs() > 100.0 || (y - screen_h / 2.0).abs() > 100.0 {
-                if rng.gen_bool(0.8) {
+            if (x - screen_w / 2.0).abs() > 120.0 || (y - screen_h / 2.0).abs() > 120.0 {
+                if rng.gen_bool(0.7) {
                     self.obstacles.push(Obstacle::new_wall(x, y, width, height));
                 } else {
                     self.obstacles.push(Obstacle::new_steel(x, y, width, height));
@@ -102,7 +102,55 @@ impl Game {
             }
         }
         
-        // 添加边界墙
+        // 生成河流（通常是长条形）
+        for _ in 0..3 {
+            let x = rng.gen_range(50.0..screen_w - 200.0);
+            let y = rng.gen_range(50.0..screen_h - 150.0);
+            let width = rng.gen_range(150.0..250.0);
+            let height = rng.gen_range(40.0..60.0);
+            
+            if (x - screen_w / 2.0).abs() > 100.0 || (y - screen_h / 2.0).abs() > 100.0 {
+                self.obstacles.push(Obstacle::new_river(x, y, width, height));
+            }
+        }
+        
+        // 生成草地（隐蔽区域）
+        for _ in 0..4 {
+            let x = rng.gen_range(50.0..screen_w - 150.0);
+            let y = rng.gen_range(50.0..screen_h - 150.0);
+            let width = rng.gen_range(80.0..120.0);
+            let height = rng.gen_range(80.0..120.0);
+            
+            if (x - screen_w / 2.0).abs() > 100.0 || (y - screen_h / 2.0).abs() > 100.0 {
+                self.obstacles.push(Obstacle::new_grass(x, y, width, height));
+            }
+        }
+        
+        // 生成沙地
+        for _ in 0..3 {
+            let x = rng.gen_range(50.0..screen_w - 120.0);
+            let y = rng.gen_range(50.0..screen_h - 120.0);
+            let width = rng.gen_range(60.0..100.0);
+            let height = rng.gen_range(60.0..100.0);
+            
+            if (x - screen_w / 2.0).abs() > 80.0 || (y - screen_h / 2.0).abs() > 80.0 {
+                self.obstacles.push(Obstacle::new_sand(x, y, width, height));
+            }
+        }
+        
+        // 生成冰面（较少）
+        if rng.gen_bool(0.5) {
+            let x = rng.gen_range(100.0..screen_w - 200.0);
+            let y = rng.gen_range(100.0..screen_h - 200.0);
+            let width = rng.gen_range(80.0..150.0);
+            let height = rng.gen_range(80.0..150.0);
+            
+            if (x - screen_w / 2.0).abs() > 150.0 || (y - screen_h / 2.0).abs() > 150.0 {
+                self.obstacles.push(Obstacle::new_ice(x, y, width, height));
+            }
+        }
+        
+        // 添加边界钢墙
         let wall_thickness = 20.0;
         self.obstacles.push(Obstacle::new_steel(0.0, 0.0, screen_w, wall_thickness));
         self.obstacles.push(Obstacle::new_steel(0.0, screen_h - wall_thickness, screen_w, wall_thickness));
@@ -298,6 +346,8 @@ impl Game {
     }
     
     fn apply_powerup(&mut self, powerup_type: PowerUpType) {
+        use crate::entities::tank::{PowerEffectType};
+        
         match powerup_type {
             PowerUpType::Health => {
                 self.player_tank.heal(50);
@@ -313,11 +363,27 @@ impl Game {
                 self.score += 25;
             }
             PowerUpType::SpeedBoost => {
-                self.player_tank.speed = (self.player_tank.speed * 1.5).min(300.0);
+                self.player_tank.add_power_effect(PowerEffectType::SpeedBoost);
                 self.score += 25;
             }
             PowerUpType::Damage => {
-                // 这里可以增加伤害，暂时增加分数
+                self.player_tank.add_power_effect(PowerEffectType::DoubleDamage);
+                self.score += 40;
+            }
+            PowerUpType::RapidFire => {
+                self.player_tank.add_power_effect(PowerEffectType::RapidFire);
+                self.score += 35;
+            }
+            PowerUpType::Stealth => {
+                self.player_tank.add_power_effect(PowerEffectType::Stealth);
+                self.score += 45;
+            }
+            PowerUpType::Invincible => {
+                self.player_tank.add_power_effect(PowerEffectType::Invincible);
+                self.score += 60;
+            }
+            PowerUpType::DoubleDamage => {
+                self.player_tank.add_power_effect(PowerEffectType::DoubleDamage);
                 self.score += 40;
             }
         }

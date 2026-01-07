@@ -1,6 +1,7 @@
 use super::Position;
 use macroquad::prelude::*;
-use ::rand::{thread_rng, Rng};
+extern crate rand;
+use rand::{thread_rng, Rng};
 
 #[derive(Clone, Debug)]
 pub enum PowerUpType {
@@ -9,6 +10,10 @@ pub enum PowerUpType {
     ScatterShot,
     SpeedBoost,
     Damage,
+    RapidFire,
+    DoubleDamage,
+    Stealth,
+    Invincible,
 }
 
 #[derive(Clone)]
@@ -24,14 +29,17 @@ pub struct PowerUp {
 impl PowerUp {
     pub fn new_random(x: f32, y: f32) -> Self {
         let mut rng = thread_rng();
-        let power_type = match rng.gen_range(0..5) {
+        let power_type = match rng.gen_range(0..8) {
             0 => PowerUpType::Health,
             1 => PowerUpType::Shield,
             2 => PowerUpType::ScatterShot,
             3 => PowerUpType::SpeedBoost,
-            _ => PowerUpType::Damage,
+            4 => PowerUpType::Damage,
+            5 => PowerUpType::RapidFire,
+            6 => PowerUpType::DoubleDamage,
+            _ => PowerUpType::Stealth,
         };
-        
+
         Self {
             position: Position::new(x, y),
             power_type,
@@ -41,23 +49,23 @@ impl PowerUp {
             collected: false,
         }
     }
-    
+
     pub fn update(&mut self, dt: f32) -> bool {
         self.lifetime += dt;
         self.lifetime < self.max_lifetime && !self.collected
     }
-    
+
     pub fn collides_with_circle(&self, pos: &Position, radius: f32) -> bool {
         if self.collected {
             return false;
         }
         self.position.distance_to(pos) < self.size + radius
     }
-    
+
     pub fn collect(&mut self) {
         self.collected = true;
     }
-    
+
     pub fn get_color(&self) -> Color {
         match self.power_type {
             PowerUpType::Health => GREEN,
@@ -65,9 +73,13 @@ impl PowerUp {
             PowerUpType::ScatterShot => PURPLE,
             PowerUpType::SpeedBoost => SKYBLUE,
             PowerUpType::Damage => RED,
+            PowerUpType::RapidFire => ORANGE,
+            PowerUpType::DoubleDamage => MAGENTA,
+            PowerUpType::Stealth => GRAY,
+            PowerUpType::Invincible => GOLD,
         }
     }
-    
+
     pub fn get_symbol(&self) -> &str {
         match self.power_type {
             PowerUpType::Health => "+",
@@ -75,23 +87,31 @@ impl PowerUp {
             PowerUpType::ScatterShot => "*",
             PowerUpType::SpeedBoost => ">",
             PowerUpType::Damage => "!",
+            PowerUpType::RapidFire => "R",
+            PowerUpType::DoubleDamage => "2x",
+            PowerUpType::Stealth => "?",
+            PowerUpType::Invincible => "★",
         }
     }
-    
+
     pub fn draw(&self) {
         if self.collected {
             return;
         }
-        
+
         // 闪烁效果
-        let alpha = if (self.lifetime * 4.0).sin() > 0.0 { 1.0 } else { 0.7 };
+        let alpha = if (self.lifetime * 4.0).sin() > 0.0 {
+            1.0
+        } else {
+            0.7
+        };
         let mut color = self.get_color();
         color.a = alpha;
-        
+
         // 绘制道具
         draw_circle(self.position.x, self.position.y, self.size, color);
         draw_circle_lines(self.position.x, self.position.y, self.size, 2.0, WHITE);
-        
+
         // 绘制符号
         let text = self.get_symbol();
         let text_size = 20.0;
